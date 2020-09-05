@@ -1,70 +1,79 @@
 from bs4 import BeautifulSoup
+from pymongo import MongoClient
 import requests
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-URL = "https://www.nfl.com/news/all-news"
+URL = "https://www.nfl.com/injuries"
+link = "https://www.nfl.com"
 headlines = []
-keywords = ["injured, injury, out, starter"]
 
 port = 465
 login = "DavesEdgeBaby@gmail.com"
-password = "Idaho11!"
+password = r"Idaho11!"
 
 sender = "DavesEdgeBaby@gmail.com"
 receiver = "david_beggs@baylor.edu, grantswingler@gmail.com"
 
 req = requests.get(URL)
 soup = BeautifulSoup(req.content, "html5lib")
-table = soup.find('h3', attrs = {'class': 'all_quotes'})
+table = soup.findAll('h3')
 
-for row in table.findAll('h3', attrs = {'class': 'd3-o-media-object__title'}):
+client = MongoClient("mongodb+srv://main:Idaho11!@pastinjurycluster.zh361.gcp.mongodb.net/Injuries?retryWrites=true&w=majority")
+db = client.Injuries
+InjuryReports = db.InjuryReports
+
+for row in table:
     quote ={}
-    quote['Headline'] = row.h3.text
-    URLString = str(quote['Headline']).replace(' ', '-')
-    quote['URL'] = URL + "/" + URLString
-    headLineWords = str(quote['Headline']).split()
-    for i in headLineWords:
-        if i in keywords:
-            headlines.append(quote)
-            break
-
-message = MIMEMultipart("alternative")
-message["Subject"] = "Fantasy Update"
-message["To"] = receiver
-message["From"] = sender
-sendString = ""
-
-for q in headlines:
-    sendString += q["Headline"] + '\n' + q['URL'] + '\n\n'
+    rStr = str(row).split('\n')[1].lstrip().rstrip()
+    report = InjuryReports.find_one({'Headline': rStr})
 
 
-text = f"""\
-Here's your fantasy update for waiver lookup news (will update with backups later)
-{sendString}
-"""
+    if not report:
+        quote['Headline'] = rStr
+        quote['URL'] = link + row.parent.attrs['href']
+        headlines.append(quote)
+        result = InjuryReports.insert_one(quote)
 
-html = f"""\
-<html>
-    <body>
-        <h4>Here's your fantasy update for waiver lookup news (will update with backups later)<h4>
-        <p>{sendString}</p>
-    </body>
-</html>
-"""
+if len(headlines) != 0:
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Fantasy Update"
+    message["To"] = receiver
+    message["From"] = sender
+    sendString = ""
 
-part1 = MIMEText(text, "plain")
-part2 = MIMEText(html, "html")
+    for q in headlines:
+        sendString += "<p>" + q["Headline"] + '\n' + q['URL'] + "</p>" + '\n'
 
-message.attach(part1)
-message.attach(part2)
+    text = f"""\
+    Here's your fantasy update for waiver lookup news (will update with backups later)
+    {sendString}
+    """
 
-with smtplib.SMTP("smtp.gmail.com", port) as server:
-    server.login(login, password)
-    server.sendmail(
-        sender, receiver, message.as_string()
-    )
+    html = f"""\
+    <html>
+        <body>
+            <h4>Here's your fantasy update for waiver lookup news (will update with backups later)<h4>
+            {sendString}
+        </body>
+    </html>
+    """
+
+    part1 = MIMEText(text, "plain")
+    part2 = MIMEText(html, "html")
+
+    message.attach(part1)
+    message.attach(part2)
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", port) as server:
+        server.login(login, password)
+        server.sendmail(
+            sender, receiver, message.as_string()
+        )
+        server.close()
 
     # Should add log later
     print("Updates sent")
+else:
+    print("Nothing new to report")
