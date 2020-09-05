@@ -20,8 +20,9 @@ req = requests.get(URL)
 soup = BeautifulSoup(req.content, "html5lib")
 table = soup.findAll('h3')
 
-client = MongoClient("mongodb+srv://main:Idaho11!@pastinjurycluster.zh361.gcp.mongodb.net/Injuries?retryWrites=true&w=majority")
+client = pymongo.MongoClient("mongodb://main:Idaho11!@pastinjurycluster-shard-00-00.zh361.gcp.mongodb.net:27017,pastinjurycluster-shard-00-01.zh361.gcp.mongodb.net:27017,pastinjurycluster-shard-00-02.zh361.gcp.mongodb.net:27017/Injuries?ssl=true&replicaSet=atlas-nvpeo0-shard-0&authSource=admin&retryWrites=true&w=majority")
 db = client.Injuries
+
 InjuryReports = db.InjuryReports
 
 for row in table:
@@ -46,19 +47,19 @@ if len(headlines) != 0:
     for q in headlines:
         sendString += "<p>" + q["Headline"] + '\n' + q['URL'] + "</p>" + '\n'
 
-    text = f"""\
+    text = f("""\
     Here's your fantasy update for waiver lookup news (will update with backups later)
     {sendString}
-    """
+   """)
 
-    html = f"""\
-    <html>
+    html = f("""\
+    \<html>
         <body>
             <h4>Here's your fantasy update for waiver lookup news (will update with backups later)<h4>
             {sendString}
         </body>
     </html>
-    """
+    """)
 
     part1 = MIMEText(text, "plain")
     part2 = MIMEText(html, "html")
