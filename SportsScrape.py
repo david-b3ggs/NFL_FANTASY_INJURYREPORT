@@ -10,11 +10,11 @@ link = "https://www.nfl.com"
 headlines = []
 
 port = 465
-login = "DavesEdgeBaby@gmail.com"
-password = r"Idaho11!"
+login = "email"
+password = r"password"
 
-sender = "DavesEdgeBaby@gmail.com"
-receiver = "david_beggs@baylor.edu, grantswingler@gmail.com"
+sender = "email"
+receiver = "email, list"
 
 req = requests.get(URL)
 soup = BeautifulSoup(req.content, "html5lib")
